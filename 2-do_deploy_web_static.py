@@ -1,34 +1,34 @@
 #!/usr/bin/python3
-""" Does deployment"""
+"""Module"""
+from fabric.api import put, env, run
+from datetime import datetime
+import os.path
 
-from fabric.api import *
-import os
-
-env.hosts = ["34.73.8.171", "34.74.18.52"]
-env.user = "ubuntu"
+env.user = 'ubuntu'
+env.hosts = ['35.190.159.176', '35.229.61.48']
 
 
 def do_deploy(archive_path):
-    """ Deploys archive to servers"""
+    """function"""
     if not os.path.exists(archive_path):
         return False
+    put(archive_path, "/tmp")
+    f = archive_path.split("/")[-1]
+    name = f.split('.')[0]
+    new_dir = "{}{}".format("/data/web_static/releases/", name)
 
-    results = []
+    run("mkdir -p {}".format(new_dir))
 
-    res = put(archive_path, "/tmp")
-    results.append(res.succeeded)
+    run("tar xzf /tmp/{} -C {}".format(f, new_dir))
 
-    basename = os.path.basename(archive_path)
-    if basename[-4:] == ".tgz":
-        name = basename[:-4]
-    newdir = "/data/web_static/releases/" + name
-    run("mkdir -p " + newdir)
-    run("tar -xzf /tmp/" + basename + " -C " + newdir)
+    run("rm -rf /tmp/{}".format(f))
 
-    run("rm /tmp/" + basename)
-    run("mv " + newdir + "/web_static/* " + newdir)
-    run("rm -rf " + newdir + "/web_static")
-    run("rm -rf /data/web_static/current")
-    run("ln -s " + newdir + " /data/web_static/current")
+    run("mv {}/web_static/* {}".format(new_dir, new_dir))
+
+    run("rm -rf {}/web_static".format(new_dir))
+
+    run("rm -rf {}".format("/data/web_static/current"))
+
+    run("ln -s {} {}".format(new_dir, "/data/web_static/current"))
 
     return True
