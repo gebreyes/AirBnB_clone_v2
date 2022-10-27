@@ -1,15 +1,35 @@
-# Redoing task 0: Installs nginx and configures server
-exec { '/usr/bin/env apt-get -y update' : }
--> exec { '/usr/bin/env apt-get -y install nginx' : }
--> exec { '/usr/bin/env sed -i "/listen \[::\]:80 default_server/ a\\\trewrite ^/redirect_me http://www.holbertonschool.com permanent;" /etc/nginx/sites-available/default' : }
--> exec { '/usr/bin/env sed -i "/listen \[::\]:80 default_server/ a\\\tadd_header X-Served-By \"\$HOSTNAME\";" /etc/nginx/sites-available/default' : }
--> exec { '/usr/bin/env sed -i "/redirect_me/ a\\\terror_page 404 /custom_404.html;" /etc/nginx/sites-available/default' : }
--> exec { '/usr/bin/env # echo "Ceci n\'est pas une page" > /var/www/html/custom_404.html' : }
--> exec { '/usr/bin/env service nginx start' : }
--> exec { '/usr/bin/env mkdir -p /data/web_static/releases/test/' : }
--> exec { '/usr/bin/env mkdir -p /data/web_static/shared/' : }
--> exec { '/usr/bin/env echo "Hello Holberton School!" > /data/web_static/releases/test/index.html' : }
--> exec { '/usr/bin/env ln -sf /data/web_static/releases/test/ /data/web_static/current' : }
--> exec { '/usr/bin/env sed -i "/^\tlocation \/ {$/ i\\\tlocation /hbnb_static {\n\t\talias /data/web_static/current/;\n\t\tautoindex off;\n}" /etc/nginx/sites-available/default' : }
--> exec { '/usr/bin/env service nginx restart' : }
--> exec { '/usr/bin/env chown -R ubuntu:ubuntu /data/' : }
+#  Puppet
+
+exec { 'Nginx setup':
+command => 'apt-get -y update;
+apt-get -y install nginx;
+mkdir -p /data/web_static/shared/;
+mkdir -p /data/web_static/releases/test/;
+echo "Holberton" > /data/web_static/releases/test/index.html;
+ln -fs /data/web_static/releases/test/ /data/web_static/current;
+chown -R ubuntu:ubuntu /data/;
+printf %s "server {
+    listen 80;
+    listen [::]:80 default_server;
+    add_header X-Served-By $HOSTNAME;
+    root   /usr/share/nginx/html;
+    index  index.html index.htm;
+    location /hbnb_static {
+    	alias /data/web_static/current;
+    	index  index.html index.htm;
+    }
+
+    location /redirect_me {
+        return 301 http://youtube.com/;
+    }
+
+    error_page 404 /404.html;
+    location /404 {
+      root /usr/share/nginx/html;
+      internal;
+    }
+}" > /etc/nginx/sites-available/default;
+sudo service nginx restart;
+',
+provider   => 'shell',
+}
